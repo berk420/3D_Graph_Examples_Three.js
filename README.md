@@ -1,5 +1,8 @@
 # 3D_Graph_Three.js
 
+## Goal
+- Showing 3 line graph in same grid 
+
 ## Versions
 
 ### 1.1
