@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Grid with Chart Data</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <script type="module">
+        import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.127.0/build/three.module.js";
+        import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.127.0/examples/jsm/controls/OrbitControls.js";
+
+        const chartData = [
+            { x: '2020/9', y: 83580067 },
+            { x: '2020/12', y: 88071052 },
+            { x: '2021/3', y: 92746570 },
+            { x: '2021/6', y: 96922693 },
+            { x: '2021/9', y: 104188444 },
+            { x: '2021/12', y: 121105062 },
+            { x: '2022/3', y: 138974750 },
+            { x: '2022/6', y: 164018189 },
+            { x: '2022/9', y: 204052422 },
+            { x: '2022/12', y: 609933000 },
+            { x: '2023/3', y: 255249000 },
+            { x: '2023/6', y: 289432000 },
+            { x: '2023/9', y: 349227000 },
+            { x: '2023/12', y: 775845000 },
+            { x: '2024/3', y: 754952000 }
+        ];
+
+        let scene = new THREE.Scene();
+        let camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
+        camera.position.setScalar(10);
+        let renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x404040);
+        document.body.appendChild(renderer.domElement);
+
+        let controls = new OrbitControls(camera, renderer.domElement);
+
+        let g1 = GridGeometry(5, 5, 4, 3, [0, 0]);
+        let m1 = new THREE.LineBasicMaterial({ color: "yellow" });
+        let grid1 = new THREE.LineSegments(g1, m1);
+        scene.add(grid1);
+
+        let g2 = GridGeometry(5, 3, 4, 2, [1, 1], ["x", Math.PI * 0.5]);
+        let m2 = new THREE.LineBasicMaterial({ color: "magenta" });
+        let grid2 = new THREE.LineSegments(g2, m2);
+        scene.add(grid2);
+
+        let g3 = GridGeometry(3, 5, 2, 3, [1, 0], ["y", Math.PI * -0.5]);
+        let m3 = new THREE.LineBasicMaterial({ color: "aqua" });
+        let grid3 = new THREE.LineSegments(g3, m3);
+        scene.add(grid3);
+
+        // Line geometry and material for chart data
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
+        const lineGeometry = new THREE.BufferGeometry();
+
+        // Convert chart data to Three.js format
+        const vertices = chartData.map(data => new THREE.Vector3(parseInt(data.x.split('/')[0]), data.y / 1000000, 0));
+
+        // Add chart data to geometry
+        lineGeometry.setFromPoints(vertices);
+
+        // Create line object and add to scene
+        const line = new THREE.Line(lineGeometry, lineMaterial);
+        scene.add(line);
+
+        renderer.setAnimationLoop(() => {
+            renderer.render(scene, camera);
+        });
+
+        function GridGeometry(width = 1, height = 1, wSeg = 1, hSeg = 1, lExt = [0, 0], rot = ["x", 0]) {
+            let seg = new THREE.Vector2(width / wSeg, height / hSeg);
+            let hlfSeg = seg.clone().multiplyScalar(0.5);
+
+            let axis = rot[0] == "x" ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+            let rotAngle = rot[1];
+
+            let pts = [], sprite, count = 0;
+
+            for (let y = 0; y <= hSeg; y++) {
+                pts.push(
+                    new THREE.Vector3(0, y * seg.y, 0).applyAxisAngle(axis, rotAngle),
+                    new THREE.Vector3(width + (hlfSeg.x * lExt[0]), y * seg.y, 0).applyAxisAngle(axis, rotAngle)
+                )
+                if (lExt[0] > 0) {
+                    let msg = 'pt' + count;
+                    sprite = makeTextSprite(msg, {});
+                    scene.add(sprite);
+                    sprite.position.set(width + (hlfSeg.x * lExt[0]) + 0.75, y * seg.y, 0).applyAxisAngle(axis, rotAngle);
+                    count++;
+                }
+            }
+
+            for (let x = 0; x <= wSeg; x++) {
+                pts.push(
+                    new THREE.Vector3(x * seg.x, 0, 0).applyAxisAngle(axis, rotAngle),
+                    new THREE.Vector3(x * seg.x, height + (hlfSeg.y * lExt[1]), 0).applyAxisAngle(axis, rotAngle)
+                )
+                if (lExt[1] > 0) {
+                    let msg = 'pt' + count;
+                    sprite = makeTextSprite(msg);
+                    scene.add(sprite);
+                    sprite.position.set(x * seg.x, height + (hlfSeg.y * lExt[1]) + 0.25, 0).applyAxisAngle(axis, rotAngle);
+                    count++;
+                }
+            }
+
+            return new THREE.BufferGeometry().setFromPoints(pts);
+        }
+
+        function makeTextSprite(message, parameters = {}) {
+            var fontface = parameters.hasOwnProperty("fontface") ? parameters["fontface"] : "Arial";
+            var fontsize = parameters.hasOwnProperty("fontsize") ? parameters["fontsize"] : 18;
+            var borderThickness = parameters.hasOwnProperty("borderThickness") ? parameters["borderThickness"] : 0;
+            var borderColor = parameters.hasOwnProperty("borderColor") ? parameters["borderColor"] : { r: 250, g: 250, b: 250, a: 1.0 };
+            var backgroundColor = parameters.hasOwnProperty("backgroundColor") ? parameters["backgroundColor"] : { r: 255, g: 255, b: 255, a: 1.0 };
+
+            var canvas = document.createElement('canvas');
+            var context = canvas.getContext('2d');
+            context.font = "Bold " + fontsize + "px " + fontface;
+
+            var metrics = context.measureText(message);
+            var textWidth = metrics.width;
+            canvas.width = textWidth;
+            canvas.height = fontsize * 1.25;
+            let ratio = canvas.width / canvas.height;
+
+            context.fillStyle = "rgba(" + backgroundColor.r + "," + backgroundColor.g + "," + backgroundColor.b + "," + backgroundColor.a + ")";
+            context.strokeStyle = "rgba(" + borderColor.r + "," + borderColor.g + "," + borderColor.b + "," + borderColor.a + ")";
+            context.fillStyle = "rgba(0, 0, 0, 1.0)";
+            context.fillText(message, borderThickness, fontsize + borderThickness);
+
+            var texture = new THREE.Texture(canvas)
+            texture.needsUpdate = true;
+
+            var spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+            var sprite = new THREE.Sprite(spriteMaterial);
+            sprite.scale.set(1 / ratio, 1, 1.0);
+            return sprite;
+        }
+    </script>
+</body>
+</html>
